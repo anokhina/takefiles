@@ -50,7 +50,7 @@
       <archive>
         <manifest>
           <addClasspath>true</addClasspath>
-          <mainClass>ru.org.sevn.winplay.App</mainClass>
+          <mainClass>ru.org.sevn.takefiles.App</mainClass>
         </manifest>
       </archive>
       <descriptorRefs>
