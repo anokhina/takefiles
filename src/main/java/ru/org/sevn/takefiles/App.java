@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
@@ -42,19 +43,39 @@ public class App extends JFrame {
     
     private LinkedHashSet<String> files = new LinkedHashSet<>();
     
-    private File dir2copy = new File("C:/TEMP/test");
+    private File dir2copy = null; //new File("C:/TEMP/test");
     
     JFileChooser fileChooser = makeFileChooser();
+    JFileChooser dirChooser = makeDirChooser();
     public App() {
-        if (!dir2copy.exists()) {
+        if (dir2copy != null && !dir2copy.exists()) {
             dir2copy.mkdirs();
         }
         //super(new BorderLayout());
         JPanel contentPane = new JPanel(new BorderLayout());
         JPanel buttons = new JPanel(new FlowLayout());
+        JPanel copyToPanel = new JPanel(new FlowLayout());
+        final JLabel copyToDirLabel = new JLabel();
+        if (dir2copy != null) {
+            copyToDirLabel.setText(dir2copy.getAbsolutePath());
+        }
+        copyToPanel.add(copyToDirLabel);
+        JButton changeBt = new JButton("Choose dir");
+        copyToPanel.add(changeBt);
+        changeBt.addActionListener( e -> {
+            int returnVal = dirChooser.showDialog(App.this, "Open");
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+                File file = dirChooser.getSelectedFile();
+                if (file != null) {
+                    copyToDirLabel.setText(file.getAbsolutePath());
+                    dir2copy = file;
+                }
+            }
+        } );
         contentPane.add(buttons, BorderLayout.NORTH);
         final JTextArea selectedFiles = new JTextArea();
         contentPane.add(selectedFiles, BorderLayout.CENTER);
+        contentPane.add(copyToPanel, BorderLayout.SOUTH);
         
         {
             JButton selectFiles = new JButton("Choose files");
@@ -79,6 +100,9 @@ public class App extends JFrame {
     }
     
     private void copyFiles() {
+        if (dir2copy == null) {
+            return;
+        }
         Path top = Paths.get(dir2copy.getAbsolutePath());
         files.stream().forEach( s -> {
             Path p = Paths.get(s);
@@ -123,6 +147,21 @@ public class App extends JFrame {
         }
     }
     
+    private JFileChooser makeDirChooser() {
+        JFileChooser fileChooser = new JFileChooser();
+        File file2open = dir2copy;
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+        //fileChooser.addChoosableFileFilter(new PatternFileChooserFilter(null, "All files"));
+        //fileChooser.setAcceptAllFileFilterUsed(false);
+
+        //fileChooser.setFileView(new ImageFileView());
+        if (file2open != null) {
+            fileChooser.setSelectedFile(file2open);
+        }
+        
+        return fileChooser;
+    }
     private JFileChooser makeFileChooser() {
         JFileChooser fileChooser = new MyJFileChooser();
         File file2open = new File(".");
