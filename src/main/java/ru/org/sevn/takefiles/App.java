@@ -46,6 +46,8 @@ import ru.org.sevn.utilwt.filechooser.ImageFileView;
 
 public class App extends JFrame {
     
+    private File tempFile = new File("ru.org.sevn.takefiles.lst");
+    
     private LinkedHashSet<String> files = new LinkedHashSet<>();
     
     private File dir2copy = null; //new File("C:/TEMP/test");
@@ -91,7 +93,7 @@ public class App extends JFrame {
                 int res = JOptionPane.showConfirmDialog(this, "Clear file list?", TITLE_QUESTION, JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
                     files.clear();
-                    updateSelectedFilesTA(selectedFilesTA, files);
+                    updateSelectedFiles();
                 }
             });
             buttons.add(clearFiles);
@@ -101,7 +103,7 @@ public class App extends JFrame {
             JButton selectFiles = new JButton("Choose files");
             selectFiles.addActionListener(e -> {
                 int returnVal = fileChooser.showDialog(App.this, "Open");
-                updateSelectedFilesTA(selectedFilesTA, files);
+                updateSelectedFiles();
             });
             buttons.add(selectFiles);
         }
@@ -118,7 +120,7 @@ public class App extends JFrame {
             openList.addActionListener(e -> {
                 int returnVal = fileListChooser.showDialog(App.this, "Open");
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    openFile(fileListChooser.getSelectedFile());
+                    openFile(fileListChooser.getSelectedFile(), false);
                 }
             });
             buttons.add(openList);
@@ -128,7 +130,7 @@ public class App extends JFrame {
             saveList.addActionListener(e -> {
                 int returnVal = fileListChooser.showDialog(App.this, "Open to save");
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    saveFile(fileListChooser.getSelectedFile());
+                    saveFile(fileListChooser.getSelectedFile(), false);
                 }
             });
             buttons.add(saveList);
@@ -150,28 +152,34 @@ public class App extends JFrame {
     private static final String TITLE_ERROR = "Error";
     private static final String TITLE_QUESTION = "Question";
     
-    private void saveFile(File fl) {
+    private void saveFile(File fl, boolean quiet) {
         if (fl != null) {
             try {
                 Files.write(fl.toPath(), files, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
-                JOptionPane.showMessageDialog(this, "File list saved in " + fl.getAbsolutePath(), TITLE_RESULT, JOptionPane.INFORMATION_MESSAGE);
+                if (!quiet) {
+                    JOptionPane.showMessageDialog(this, "File list saved in " + fl.getAbsolutePath(), TITLE_RESULT, JOptionPane.INFORMATION_MESSAGE);
+                }
             } catch (IOException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-                JOptionPane.showMessageDialog(this, "Can't write into " + fl.getAbsolutePath(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
+                if (!quiet) {
+                    JOptionPane.showMessageDialog(this, "Can't write into " + fl.getAbsolutePath(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }
     
-    private void openFile(File fl) {
-        if (fl != null) {
+    private void openFile(File fl, boolean quiet) {
+        if (fl != null && fl.exists() && fl.canRead()) {
             try {
                 Collection<String> lines = Files.readAllLines(fl.toPath(), StandardCharsets.UTF_8);
                 files.clear();
                 files.addAll(lines);
-                updateSelectedFilesTA(selectedFilesTA, files);
+                updateSelectedFiles();
             } catch (IOException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-                JOptionPane.showMessageDialog(this, "Can't read from " + fl.getAbsolutePath(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
+                if (!quiet) {
+                    JOptionPane.showMessageDialog(this, "Can't read from " + fl.getAbsolutePath(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }
@@ -303,6 +311,11 @@ public class App extends JFrame {
         protected void addImagePreview() {}
     }
     
+    private void updateSelectedFiles() {
+        updateSelectedFilesTA(selectedFilesTA, files);
+        saveFile(tempFile, true);
+    }
+    
     public static void updateSelectedFilesTA(JTextArea selectedFiles, Collection<String> files) {
         final StringBuilder sb = new StringBuilder();
         files.stream().forEach(s -> {sb.append(s).append("\n");});
@@ -311,6 +324,7 @@ public class App extends JFrame {
 
     public void showFrame() {
         setVisible(true);
+        openFile(tempFile, true);
     }
     
     private static void runMain() {
