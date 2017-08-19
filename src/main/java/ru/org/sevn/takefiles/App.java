@@ -19,8 +19,15 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -35,8 +42,13 @@ public class App extends JFrame {
     
     private LinkedHashSet<String> files = new LinkedHashSet<>();
     
+    private File dir2copy = new File("C:/TEMP/test");
+    
     JFileChooser fileChooser = makeFileChooser();
     public App() {
+        if (!dir2copy.exists()) {
+            dir2copy.mkdirs();
+        }
         //super(new BorderLayout());
         JPanel contentPane = new JPanel(new BorderLayout());
         JPanel buttons = new JPanel(new FlowLayout());
@@ -56,7 +68,7 @@ public class App extends JFrame {
         {
             JButton copyFiles = new JButton("Copy files");
             copyFiles.addActionListener(e -> {
-                
+                copyFiles();
             });
             buttons.add(copyFiles);
         }
@@ -64,6 +76,39 @@ public class App extends JFrame {
         setContentPane(contentPane);
         setBounds(0, 0, 400, 400);
         //add(center, BorderLayout.CENTER);
+    }
+    
+    private void copyFiles() {
+        Path top = Paths.get(dir2copy.getAbsolutePath());
+        files.stream().forEach( s -> {
+            Path p = Paths.get(s);
+            Path r = p.getRoot();
+            String rs = r.toString();
+            String winDr = null;
+            if (rs.contains(":")) {
+                winDr = rs.substring(0, rs.indexOf(":"));
+            }
+            Path prel = r.relativize(p);
+            Path np;
+            if (winDr != null) {
+                np = top.resolve(winDr);
+                np = np.resolve(prel);
+            } else {
+                np = top.resolve(prel);
+            }
+            try {
+                //System.out.println("->"+np.toString()+":"+winDr);
+                File toDir = np.getParent().toFile();
+                if (!toDir.exists()) {
+                    toDir.mkdirs();
+                }
+                Files.copy(p, np, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException ex) {
+                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                System.err.println("Can't copy " + p + " to " + np + ":" + ex.getMessage());
+            }
+        } );
+        System.err.println("Files copied");
     }
 
     private static class MyJFileChooser extends JFileChooser {
