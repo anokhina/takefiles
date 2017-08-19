@@ -16,7 +16,11 @@
 package ru.org.sevn.takefiles;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.io.File;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -26,18 +30,39 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import ru.org.sevn.utilwt.filechooser.FileChooserImagePreview;
 import ru.org.sevn.utilwt.filechooser.ImageFileView;
-import ru.org.sevn.utilwt.filechooser.PatternFileChooserFilter;
 
 public class App extends JFrame {
+    
+    private LinkedHashSet<String> files = new LinkedHashSet<>();
     
     JFileChooser fileChooser = makeFileChooser();
     public App() {
         //super(new BorderLayout());
-        JButton center = new JButton("ZZZ");
-        center.addActionListener(e -> {
-            int returnVal = fileChooser.showDialog(App.this, "Open");
-        });
-        setContentPane(center);
+        JPanel contentPane = new JPanel(new BorderLayout());
+        JPanel buttons = new JPanel(new FlowLayout());
+        contentPane.add(buttons, BorderLayout.NORTH);
+        final JTextArea selectedFiles = new JTextArea();
+        contentPane.add(selectedFiles, BorderLayout.CENTER);
+        
+        {
+            JButton selectFiles = new JButton("Choose files");
+            selectFiles.addActionListener(e -> {
+                int returnVal = fileChooser.showDialog(App.this, "Open");
+                updateSelectedFilesTA(selectedFiles, files);
+            });
+            buttons.add(selectFiles);
+        }
+        
+        {
+            JButton copyFiles = new JButton("Copy files");
+            copyFiles.addActionListener(e -> {
+                
+            });
+            buttons.add(copyFiles);
+        }
+        
+        setContentPane(contentPane);
+        setBounds(0, 0, 400, 400);
         //add(center, BorderLayout.CENTER);
     }
 
@@ -53,7 +78,7 @@ public class App extends JFrame {
         }
     }
     
-    private static JFileChooser makeFileChooser() {
+    private JFileChooser makeFileChooser() {
         JFileChooser fileChooser = new MyJFileChooser();
         File file2open = new File(".");
         fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
@@ -63,20 +88,57 @@ public class App extends JFrame {
 
         fileChooser.setFileView(new ImageFileView());
         fileChooser.setSelectedFile(file2open);
-        fileChooser.setAccessory(new MyFileChooserImagePreview(fileChooser));
+        fileChooser.setAccessory(new MyFileChooserImagePreview(fileChooser, files));
         return fileChooser;
     }
     
     public static class MyFileChooserImagePreview extends FileChooserImagePreview {
         JTextArea selectedFiles = new JTextArea();
+        private final LinkedHashSet<String> files;
         
-        public MyFileChooserImagePreview(JFileChooser fc) {
+        public MyFileChooserImagePreview(final JFileChooser fc, final LinkedHashSet<String> files) {
             super(fc);
-            //JButton 
-            add(selectedFiles, BorderLayout.EAST);
+            this.files = files;
+            JPanel buttons = new JPanel(new FlowLayout());
+            JButton add = new JButton("+");
+            JButton del = new JButton("-");
+            buttons.add(add);
+            buttons.add(del);
+            add.addActionListener( e -> {
+                File fl = getFile();
+                if (fl != null) {
+                    if (files.add(fl.getAbsolutePath())) {
+                        updateSelectedFiles();
+                    }
+                }
+            } );
+            del.addActionListener( e -> {
+                File fl = getFile();
+                if (fl != null) {
+                    if (files.remove(fl.getAbsolutePath())) {
+                        updateSelectedFiles();
+                    }
+                }
+            } );
+            add(buttons, BorderLayout.NORTH);
+            add(selectedFiles, BorderLayout.CENTER);
+            selectedFiles.setPreferredSize(new Dimension(FileChooserImagePreview.PREVIEW_WIDTH, FileChooserImagePreview.PREVIEW_HEIGHT));
+            setPreferredSize(new Dimension(FileChooserImagePreview.PREVIEW_WIDTH * 2, FileChooserImagePreview.PREVIEW_HEIGHT));
         }
         
+        private void updateSelectedFiles() {
+            updateSelectedFilesTA(selectedFiles, files);
+        }
+        
+        @Override
+        protected void addImagePreview() {}
     }
+    
+    public static void updateSelectedFilesTA(JTextArea selectedFiles, Collection<String> files) {
+        final StringBuilder sb = new StringBuilder();
+        files.stream().forEach(s -> {sb.append(s).append("\n");});
+        selectedFiles.setText(sb.toString());
+    }    
 
     public void showFrame() {
         setVisible(true);

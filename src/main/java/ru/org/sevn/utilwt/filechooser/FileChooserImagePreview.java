@@ -44,9 +44,8 @@ public class FileChooserImagePreview extends JPanel implements PropertyChangeLis
 
     public FileChooserImagePreview(JFileChooser fc) {
         super(new BorderLayout());
-        imageJComponent = new ImageJComponent();
-        add(imageJComponent, BorderLayout.CENTER);
-
+        addImagePreview();
+        
         JTextArea textArea = new JTextArea(3, 20);
         textArea.setText("");
         textArea.setWrapStyleWord(true);
@@ -60,6 +59,11 @@ public class FileChooserImagePreview extends JPanel implements PropertyChangeLis
         label = textArea;
         add(label, BorderLayout.SOUTH);
         fc.addPropertyChangeListener(this);
+    }
+    
+    protected void addImagePreview() {
+        imageJComponent = new ImageJComponent();
+        add(imageJComponent, BorderLayout.CENTER);
     }
 
     public String getPreviewText() {
