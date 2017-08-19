@@ -86,6 +86,18 @@ public class App extends JFrame {
         contentPane.add(copyToPanel, BorderLayout.SOUTH);
         
         {
+            JButton clearFiles = new JButton("Clear");
+            clearFiles.addActionListener(e -> {
+                int res = JOptionPane.showConfirmDialog(this, "Clear file list?", TITLE_QUESTION, JOptionPane.YES_NO_OPTION);
+                if (res == JOptionPane.YES_OPTION) {
+                    files.clear();
+                    updateSelectedFilesTA(selectedFilesTA, files);
+                }
+            });
+            buttons.add(clearFiles);
+        }
+        
+        {
             JButton selectFiles = new JButton("Choose files");
             selectFiles.addActionListener(e -> {
                 int returnVal = fileChooser.showDialog(App.this, "Open");
@@ -136,6 +148,7 @@ public class App extends JFrame {
     
     private static final String TITLE_RESULT = "Result";
     private static final String TITLE_ERROR = "Error";
+    private static final String TITLE_QUESTION = "Question";
     
     private void saveFile(File fl) {
         if (fl != null) {
