@@ -18,6 +18,8 @@ package ru.org.sevn.takefiles;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -96,7 +98,14 @@ public class App extends JFrame {
         
         setContentPane(contentPane);
         setBounds(0, 0, 400, 400);
-        //add(center, BorderLayout.CENTER);
+
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                System.exit(0);
+            }
+        });
     }
     
     private void copyFiles() {
