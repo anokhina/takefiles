@@ -22,10 +22,12 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.logging.Level;
@@ -47,8 +49,12 @@ public class App extends JFrame {
     
     private File dir2copy = null; //new File("C:/TEMP/test");
     
-    JFileChooser fileChooser = makeFileChooser();
-    JFileChooser dirChooser = makeDirChooser();
+    private JFileChooser fileChooser = makeFileChooser();
+    private JFileChooser dirChooser = makeDirChooser();
+    private JFileChooser fileListChooser = makeFileListChooser();
+    
+    final JTextArea selectedFilesTA = new JTextArea();
+    
     public App() {
         if (dir2copy != null && !dir2copy.exists()) {
             dir2copy.mkdirs();
@@ -75,15 +81,14 @@ public class App extends JFrame {
             }
         } );
         contentPane.add(buttons, BorderLayout.NORTH);
-        final JTextArea selectedFiles = new JTextArea();
-        contentPane.add(selectedFiles, BorderLayout.CENTER);
+        contentPane.add(selectedFilesTA, BorderLayout.CENTER);
         contentPane.add(copyToPanel, BorderLayout.SOUTH);
         
         {
             JButton selectFiles = new JButton("Choose files");
             selectFiles.addActionListener(e -> {
                 int returnVal = fileChooser.showDialog(App.this, "Open");
-                updateSelectedFilesTA(selectedFiles, files);
+                updateSelectedFilesTA(selectedFilesTA, files);
             });
             buttons.add(selectFiles);
         }
@@ -95,9 +100,29 @@ public class App extends JFrame {
             });
             buttons.add(copyFiles);
         }
+        {
+            JButton openList = new JButton("Open list of files");
+            openList.addActionListener(e -> {
+                int returnVal = fileListChooser.showDialog(App.this, "Open");
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    openFile(fileListChooser.getSelectedFile());
+                }
+            });
+            buttons.add(openList);
+        }
+        {
+            JButton saveList = new JButton("Save list of files");
+            saveList.addActionListener(e -> {
+                int returnVal = fileListChooser.showDialog(App.this, "Open to save");
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    saveFile(fileListChooser.getSelectedFile());
+                }
+            });
+            buttons.add(saveList);
+        }
         
         setContentPane(contentPane);
-        setBounds(0, 0, 400, 400);
+        setBounds(0, 0, 640, 400);
 
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -108,6 +133,32 @@ public class App extends JFrame {
         });
     }
     
+    private void saveFile(File fl) {
+        if (fl != null) {
+            try {
+                Files.write(fl.toPath(), files, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+                System.err.println("File list saved in " + fl.getAbsolutePath());
+            } catch (IOException ex) {
+                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                System.err.println("Can't write into " + fl.getAbsolutePath());
+            }
+        }
+    }
+    
+    private void openFile(File fl) {
+        if (fl != null) {
+            try {
+                Collection<String> lines = Files.readAllLines(fl.toPath(), StandardCharsets.UTF_8);
+                files.clear();
+                files.addAll(lines);
+                updateSelectedFilesTA(selectedFilesTA, files);
+            } catch (IOException ex) {
+                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                System.err.println("Can't read from " + fl.getAbsolutePath());
+            }
+        }
+    }
+
     private void copyFiles() {
         if (dir2copy == null) {
             return;
@@ -156,15 +207,16 @@ public class App extends JFrame {
         }
     }
     
+    private JFileChooser makeFileListChooser() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        return fileChooser;
+    }
     private JFileChooser makeDirChooser() {
         JFileChooser fileChooser = new JFileChooser();
         File file2open = dir2copy;
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-        //fileChooser.addChoosableFileFilter(new PatternFileChooserFilter(null, "All files"));
-        //fileChooser.setAcceptAllFileFilterUsed(false);
-
-        //fileChooser.setFileView(new ImageFileView());
         if (file2open != null) {
             fileChooser.setSelectedFile(file2open);
         }
