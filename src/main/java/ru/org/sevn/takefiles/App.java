@@ -36,6 +36,7 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
@@ -133,14 +134,17 @@ public class App extends JFrame {
         });
     }
     
+    private static final String TITLE_RESULT = "Result";
+    private static final String TITLE_ERROR = "Error";
+    
     private void saveFile(File fl) {
         if (fl != null) {
             try {
                 Files.write(fl.toPath(), files, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
-                System.err.println("File list saved in " + fl.getAbsolutePath());
+                JOptionPane.showMessageDialog(this, "File list saved in " + fl.getAbsolutePath(), TITLE_RESULT, JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-                System.err.println("Can't write into " + fl.getAbsolutePath());
+                JOptionPane.showMessageDialog(this, "Can't write into " + fl.getAbsolutePath(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -154,15 +158,17 @@ public class App extends JFrame {
                 updateSelectedFilesTA(selectedFilesTA, files);
             } catch (IOException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-                System.err.println("Can't read from " + fl.getAbsolutePath());
+                JOptionPane.showMessageDialog(this, "Can't read from " + fl.getAbsolutePath(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void copyFiles() {
         if (dir2copy == null) {
+            JOptionPane.showMessageDialog(this, "No destignation folder", TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
             return;
         }
+        StringBuilder errors = new StringBuilder();
         Path top = Paths.get(dir2copy.getAbsolutePath());
         files.stream().forEach( s -> {
             Path p = Paths.get(s);
@@ -189,10 +195,15 @@ public class App extends JFrame {
                 Files.copy(p, np, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                errors.append("Can't copy " + p + " to " + np).append("\n");
                 System.err.println("Can't copy " + p + " to " + np + ":" + ex.getMessage());
             }
         } );
-        System.err.println("Files copied");
+        if (errors.length() > 0) {
+            JOptionPane.showMessageDialog(this, errors.toString(), TITLE_ERROR, JOptionPane.ERROR_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Files copied", TITLE_RESULT, JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     private static class MyJFileChooser extends JFileChooser {
