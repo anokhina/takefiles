@@ -100,6 +100,15 @@ public class App extends JFrame {
         }
         
         {
+            JButton sizeFiles = new JButton("Size");
+            sizeFiles.addActionListener(e -> {
+                long size = countSize();
+                setTitle("Files size: " + size);
+            });
+            buttons.add(sizeFiles);
+        }
+        
+        {
             JButton selectFiles = new JButton("Choose files");
             selectFiles.addActionListener(e -> {
                 int returnVal = fileChooser.showDialog(App.this, "Open");
@@ -225,6 +234,29 @@ public class App extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this, "Files copied", TITLE_RESULT, JOptionPane.INFORMATION_MESSAGE);
         }
+    }
+
+    private long countSize() {
+        long ret = 0;
+        for (String s : files) {
+            Path p = Paths.get(s);
+            File fl = p.toFile();
+            ret += getSize(fl);
+        }
+        return ret;
+    }
+    
+    private long getSize(File f) {
+        if (f.isFile()) {
+            return f.length();
+        } else if (f.isDirectory()) {
+            long ret = 0;
+            for (File fl : f.listFiles()) {
+                ret += getSize(fl);
+            }
+            return ret;
+        }
+        return 0;
     }
 
     private static class MyJFileChooser extends JFileChooser {
