@@ -16,8 +16,10 @@
 package ru.org.sevn.takefiles;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.HeadlessException;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -269,6 +271,12 @@ public class App extends JFrame {
             }
             SwingUtilities.updateComponentTreeUI(this);
         }
+        public int showDialog(Component parent, String approveButtonText) throws HeadlessException {
+            MyFileChooserImagePreview acc = (MyFileChooserImagePreview)getAccessory();
+            acc.updateSelectedFiles();
+            int ret = super.showDialog(parent, approveButtonText);
+            return ret;
+        }
     }
     
     private JFileChooser makeFileListChooser() {
@@ -335,7 +343,7 @@ public class App extends JFrame {
             setPreferredSize(new Dimension(FileChooserImagePreview.PREVIEW_WIDTH * 2, FileChooserImagePreview.PREVIEW_HEIGHT));
         }
         
-        private void updateSelectedFiles() {
+        public void updateSelectedFiles() {
             updateSelectedFilesTA(selectedFiles, files);
         }
         
