@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.text.DecimalFormat;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.logging.Level;
@@ -43,6 +44,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.text.BadLocationException;
 import ru.org.sevn.utilwt.filechooser.FileChooserImagePreview;
 import ru.org.sevn.utilwt.filechooser.ImageFileView;
 
@@ -50,7 +52,7 @@ public class App extends JFrame {
     
     private File tempFile = new File("ru.org.sevn.takefiles.lst");
     
-    private LinkedHashSet<String> files = new LinkedHashSet<>();
+    private FilesModel filesModel = new FilesModel();
     
     private File dir2copy = null; //new File("C:/TEMP/test");
     
@@ -94,7 +96,7 @@ public class App extends JFrame {
             clearFiles.addActionListener(e -> {
                 int res = JOptionPane.showConfirmDialog(this, "Clear file list?", TITLE_QUESTION, JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
-                    files.clear();
+                    filesModel.getFiles().clear();
                     updateSelectedFiles();
                 }
             });
@@ -104,8 +106,8 @@ public class App extends JFrame {
         {
             JButton sizeFiles = new JButton("Size");
             sizeFiles.addActionListener(e -> {
-                long size = countSize();
-                setTitle("Files size: " + size);
+                long size = countSize(filesModel);
+                setTitle("Files size: " + filesModel.getSizeString());
             });
             buttons.add(sizeFiles);
         }
@@ -114,6 +116,7 @@ public class App extends JFrame {
             JButton selectFiles = new JButton("Choose files");
             selectFiles.addActionListener(e -> {
                 int returnVal = fileChooser.showDialog(App.this, "Open");
+                setTitle("Files size: " + filesModel.getSizeString());
                 updateSelectedFiles();
             });
             buttons.add(selectFiles);
@@ -166,7 +169,7 @@ public class App extends JFrame {
     private void saveFile(File fl, boolean quiet) {
         if (fl != null) {
             try {
-                Files.write(fl.toPath(), files, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+                Files.write(fl.toPath(), filesModel.getFiles(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
                 if (!quiet) {
                     JOptionPane.showMessageDialog(this, "File list saved in " + fl.getAbsolutePath(), TITLE_RESULT, JOptionPane.INFORMATION_MESSAGE);
                 }
@@ -183,8 +186,8 @@ public class App extends JFrame {
         if (fl != null && fl.exists() && fl.canRead()) {
             try {
                 Collection<String> lines = Files.readAllLines(fl.toPath(), StandardCharsets.UTF_8);
-                files.clear();
-                files.addAll(lines);
+                filesModel.getFiles().clear();
+                filesModel.getFiles().addAll(lines);
                 updateSelectedFiles();
             } catch (IOException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
@@ -202,7 +205,7 @@ public class App extends JFrame {
         }
         StringBuilder errors = new StringBuilder();
         Path top = Paths.get(dir2copy.getAbsolutePath());
-        files.stream().forEach( s -> {
+        filesModel.getFiles().stream().forEach( s -> {
             Path p = Paths.get(s);
             Path r = p.getRoot();
             String rs = r.toString();
@@ -238,23 +241,24 @@ public class App extends JFrame {
         }
     }
 
-    private long countSize() {
+    private static long countSize(FilesModel filesModel) {
         long ret = 0;
-        for (String s : files) {
+        for (String s : filesModel.getFiles()) {
             Path p = Paths.get(s);
             File fl = p.toFile();
-            ret += getSize(fl);
+            ret += countFileSize(fl);
         }
+        filesModel.setSize(ret);
         return ret;
     }
     
-    private long getSize(File f) {
+    private static long countFileSize(File f) {
         if (f.isFile()) {
             return f.length();
         } else if (f.isDirectory()) {
             long ret = 0;
             for (File fl : f.listFiles()) {
-                ret += getSize(fl);
+                ret += countFileSize(fl);
             }
             return ret;
         }
@@ -273,6 +277,7 @@ public class App extends JFrame {
         }
         public int showDialog(Component parent, String approveButtonText) throws HeadlessException {
             MyFileChooserImagePreview acc = (MyFileChooserImagePreview)getAccessory();
+            countSize(acc.getFilesModel());
             acc.updateSelectedFiles();
             int ret = super.showDialog(parent, approveButtonText);
             return ret;
@@ -305,37 +310,120 @@ public class App extends JFrame {
 
         fileChooser.setFileView(new ImageFileView());
         fileChooser.setSelectedFile(file2open);
-        fileChooser.setAccessory(new MyFileChooserImagePreview(fileChooser, files));
+        fileChooser.setAccessory(new MyFileChooserImagePreview(fileChooser, filesModel));
         return fileChooser;
     }
     
-    public static class MyFileChooserImagePreview extends FileChooserImagePreview {
-        JTextArea selectedFiles = new JTextArea();
-        private final LinkedHashSet<String> files;
-        
-        public MyFileChooserImagePreview(final JFileChooser fc, final LinkedHashSet<String> files) {
-            super(fc);
+    public static class FilesModel {
+        LinkedHashSet<String> files = new LinkedHashSet<>();
+        long size;
+
+        public LinkedHashSet<String> getFiles() {
+            return files;
+        }
+
+        public void setFiles(LinkedHashSet<String> files) {
             this.files = files;
+        }
+
+        public long getSize() {
+            return size;
+        }
+
+        public String getSizeString() {
+            StringBuilder sb = new StringBuilder();
+            long thousand = 1000;
+            long rl = size;
+            while (rl > thousand) {
+                long r = rl % thousand;
+                StringBuilder rs = new StringBuilder();
+                rs.append(r);
+                while(rs.length() < 3) {
+                    rs.insert(0, 0);
+                }
+                sb.insert(0, rs.toString()).insert(0, " ");
+                rl = rl / thousand;
+            }
+            if (rl > 0) {
+                sb.insert(0, rl);
+            }
+            return sb.toString();
+        }
+        
+        public void setSize(long size) {
+            this.size = size;
+        }
+        
+    }
+    
+    public static class MyFileChooserImagePreview extends FileChooserImagePreview {
+        private JTextArea selectedFiles = new JTextArea();
+        private final FilesModel filesModel;
+        private JLabel sizeLabel = new JLabel();
+        
+        private void removeFile(File fl) {
+            if (fl != null) {
+                long flSize = countFileSize(fl);
+                if (filesModel.getFiles().remove(fl.getAbsolutePath())) {
+                    filesModel.setSize(filesModel.getSize() - flSize);
+                    updateSelectedFiles();
+                }
+            }            
+        }
+        
+        public MyFileChooserImagePreview(final JFileChooser fc, final FilesModel filesModel) {
+            super(fc);
+            this.filesModel = filesModel;
             JPanel buttons = new JPanel(new FlowLayout());
             JButton add = new JButton("+");
             JButton del = new JButton("-");
+            JButton delLst = new JButton("\"-\"");
+            delLst.setToolTipText("Remove the line in the list");
             buttons.add(add);
             buttons.add(del);
+            buttons.add(delLst);
+            buttons.add(sizeLabel);
             add.addActionListener( e -> {
                 File fl = getFile();
                 if (fl != null) {
-                    if (files.add(fl.getAbsolutePath())) {
+                    long flSize = countFileSize(fl);
+                    if (filesModel.getFiles().add(fl.getAbsolutePath())) {
+                        filesModel.setSize(filesModel.getSize() + flSize);
                         updateSelectedFiles();
                     }
                 }
             } );
             del.addActionListener( e -> {
-                File fl = getFile();
-                if (fl != null) {
-                    if (files.remove(fl.getAbsolutePath())) {
-                        updateSelectedFiles();
+                removeFile(getFile());
+            } );
+            delLst.addActionListener( e -> {
+                int cp = selectedFiles.getCaretPosition();
+                int cpb = cp - 1;
+                StringBuilder sb = new StringBuilder();
+                String sa = "";
+                do {
+                    try {
+                        sb.insert(0, sa);
+                        sa = selectedFiles.getText(cpb, 1);
+                    } catch (BadLocationException ex) {
+                        break;
                     }
-                }
+                    cpb --;
+                } while (!sa.equals("\n"));
+                
+                sa = "";
+                do {
+                    try {
+                        sb.append(sa);
+                        sa = selectedFiles.getText(cp, 1);
+                    } catch (BadLocationException ex) {
+                        break;
+                    }
+                    cp ++;
+                } while (!sa.equals("\n"));
+                //System.err.println("--------->" + sb.toString()+"<-------");
+                removeFile(new File(sb.toString()));
+                
             } );
             add(buttons, BorderLayout.NORTH);
             add(selectedFiles, BorderLayout.CENTER);
@@ -344,15 +432,21 @@ public class App extends JFrame {
         }
         
         public void updateSelectedFiles() {
-            updateSelectedFilesTA(selectedFiles, files);
+            sizeLabel.setText(filesModel.getSizeString());
+            updateSelectedFilesTA(selectedFiles, filesModel.getFiles());
         }
         
         @Override
         protected void addImagePreview() {}
+
+        public FilesModel getFilesModel() {
+            return filesModel;
+        }
+        
     }
     
     private void updateSelectedFiles() {
-        updateSelectedFilesTA(selectedFilesTA, files);
+        updateSelectedFilesTA(selectedFilesTA, filesModel.getFiles());
         saveFile(tempFile, true);
     }
     
